@@ -1,0 +1,62 @@
+syntax = "proto3";
+option go_package = "github.com/ansuman12chat/p2p/pkg/proto";
+
+// A message object that is shared among all requests.
+message Header {
+
+  // A unique request ID to allow idempotency.
+  string request_id = 1;
+
+  // In case of a response this is the request ID of the initiating message.
+  string request_parent_id = 2;
+
+  // Unix time in milliseconds.
+  int64 timestamp = 3;
+
+  // The ID of the node that created the message (not the peer that may have sent it)
+  string node_id = 4;
+
+  // Authoring node Secp256k1 public key (32bytes) - protobufs serialized
+  bytes node_pub_key = 5;
+
+  // The signature of the message data.
+  bytes signature = 6;
+}
+
+// PushRequest is sent to the receiving peer for acceptance.
+// It contains basic information about the data that is
+// about to be transmitted.
+message PushRequest {
+
+  Header header = 1;
+
+  // The name of the file that is about to be transferred.
+  // This will also be the name that the receiving peer
+  // uses upon save.
+  string file_name = 2;
+
+  // The size of the file to be transmitted.
+  int64 file_size = 3;
+
+  // The content identifier of the file to send.
+  bytes cid = 4;
+}
+
+// PushResponse is sent as a reply to the PushRequest message.
+// It just indicates if the receiving peer is willing to
+// accept the file.
+message PushResponse {
+
+  Header header = 1;
+
+  bool accept = 2;
+}
+
+
+message TransferAcknowledge {
+
+  Header header = 1;
+
+  int64 received_bytes = 2;
+
+}
