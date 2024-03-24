@@ -7,8 +7,7 @@ import (
 
 // Writer counts the bytes written through it.
 type Writer struct {
-	w io.Writer
-
+	w    io.Writer
 	lock sync.RWMutex // protects n and err
 	n    int64
 	err  error

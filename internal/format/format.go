@@ -48,9 +48,9 @@ func Progress(width int, percent float64) string {
 	filled := int(float64(effWidth) * percent)
 	blank := effWidth - filled
 	if percent >= 1.0 {
-		return fmt.Sprintf("|%s|", strings.Repeat("#", effWidth))
+		return fmt.Sprintf("|%s|", strings.Repeat("█", effWidth))
 	} else {
-		return fmt.Sprintf("|%s%s|", strings.Repeat("#", filled), strings.Repeat("-", blank))
+		return fmt.Sprintf("|%s%s|", strings.Repeat("█", filled), strings.Repeat("-", blank))
 	}
 }
 

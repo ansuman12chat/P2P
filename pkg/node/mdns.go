@@ -35,9 +35,9 @@ type MDNSProtocol struct {
 	Peers        *sync.Map
 }
 
-// NewMdnsProtocol creates a new MDNSProtocol struct with
+// NewMDNSProtocol creates a new MDNSProtocol struct with
 // sane defaults.
-func NewMdnsProtocol(node *Node) *MDNSProtocol {
+func NewMDNSProtocol(node *Node) *MDNSProtocol {
 	m := &MDNSProtocol{
 		node:         node,
 		MdnsInterval: time.Second,

@@ -21,6 +21,9 @@ func TerminalWidth() int {
 	}
 
 	width, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 80
+	}
 	if len(parts) != 2 {
 		return 80
 	}

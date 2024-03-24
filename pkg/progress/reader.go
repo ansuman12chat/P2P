@@ -7,8 +7,7 @@ import (
 
 // Reader counts the bytes read through it.
 type Reader struct {
-	r io.Reader
-
+	r    io.Reader
 	lock sync.RWMutex // protects n and err
 	n    int64
 	err  error

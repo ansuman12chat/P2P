@@ -57,7 +57,7 @@ func Init(ctx context.Context, opts ...libp2p.Option) (*Node, error) {
 	}
 
 	node := &Node{Host: h}
-	node.MDNSProtocol = NewMdnsProtocol(node)
+	node.MDNSProtocol = NewMDNSProtocol(node)
 	node.PushProtocol = NewPushProtocol(node)
 	node.TransferProtocol = NewTransferProtocol(node)
 
