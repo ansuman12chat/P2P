@@ -31,6 +31,7 @@ func calcContentID(filepath string) (cid.Cid, error) {
 	return cid.NewCidV1(cid.Raw, mhash), nil
 }
 
+// verifyFileAccess checks if the file exists and if we have access to it.
 func verifyFileAccess(filepath string) error {
 
 	if filepath == "" {

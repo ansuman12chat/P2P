@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	Prefix     = "pcp"
+	Prefix     = "p2p"
 	ContextKey = "config"
 )
 

@@ -26,19 +26,19 @@ var (
 	appTime app.Timer = app.Time{}
 )
 
-// MdnsProtocol encapsulates the logic for discovering peers
+// MDNSProtocol encapsulates the logic for discovering peers
 // in via multicast DNS in the local network.
-type MdnsProtocol struct {
+type MDNSProtocol struct {
 	node         *Node
 	mdnsServ     mdns.Service
 	MdnsInterval time.Duration
 	Peers        *sync.Map
 }
 
-// NewMdnsProtocol creates a new MdnsProtocol struct with
+// NewMdnsProtocol creates a new MDNSProtocol struct with
 // sane defaults.
-func NewMdnsProtocol(node *Node) *MdnsProtocol {
-	m := &MdnsProtocol{
+func NewMdnsProtocol(node *Node) *MDNSProtocol {
+	m := &MDNSProtocol{
 		node:         node,
 		MdnsInterval: time.Second,
 		Peers:        &sync.Map{},
@@ -46,13 +46,9 @@ func NewMdnsProtocol(node *Node) *MdnsProtocol {
 	return m
 }
 
-// StartMdnsService starts broadcasting into the network that we are
-// interested for the service tag given by commons.ServiceTag. The
-// MdnsProtocol struct will get notified for newly discovered peers
-// via HandlePeerFound. The local network is asked for peers with a
-// frequency of one second. This function does nothing if the service
-// is already running for this protocol.
-func (m *MdnsProtocol) StartMdnsService(ctx context.Context) error {
+// StartMdnsService starts the mDNS service and registers the
+// MDNSProtocol to be notified for every newly discovered peer.
+func (m *MDNSProtocol) StartMdnsService(ctx context.Context) error {
 	if m.mdnsServ != nil {
 		return nil
 	}
@@ -67,10 +63,9 @@ func (m *MdnsProtocol) StartMdnsService(ctx context.Context) error {
 	return nil
 }
 
-// StopMdnsService removes the MdnsProtocol from being notified for
-// newly discoverd peers and shuts down the mDNS service. It also
-// clears the list of peers.
-func (m *MdnsProtocol) StopMdnsService() error {
+// StopMdnsService stops the mDNS service and clears the list
+// of peers.
+func (m *MDNSProtocol) StopMdnsService() error {
 	if m.mdnsServ == nil {
 		return nil
 	}
@@ -86,6 +81,7 @@ func (m *MdnsProtocol) StopMdnsService() error {
 	})
 
 	m.mdnsServ = nil
+	// Clearning the list of peers
 	m.Peers = &sync.Map{}
 
 	return nil
@@ -102,11 +98,12 @@ type PeerInfo struct {
 // is not seen again in the meantime. If we see the peer
 // again we reset the time to start again from that point
 // in time.
-func (m *MdnsProtocol) HandlePeerFound(pi peer.AddrInfo) {
+func (m *MDNSProtocol) HandlePeerFound(pi peer.AddrInfo) {
 	savedPeer, ok := m.Peers.Load(pi.ID)
 	if ok {
 		savedPeer.(PeerInfo).timer.Reset(gcDuration)
 	} else {
+		// If the peer is not in the list, add it with a timer
 		t := appTime.AfterFunc(gcDuration, func() {
 			m.Peers.Delete(pi.ID)
 		})
@@ -116,7 +113,7 @@ func (m *MdnsProtocol) HandlePeerFound(pi peer.AddrInfo) {
 
 // PeersList returns a sorted list of address information
 // structs. Sorting order is based on the peer ID.
-func (m *MdnsProtocol) PeersList() []peer.AddrInfo {
+func (m *MDNSProtocol) PeersList() []peer.AddrInfo {
 	peers := []peer.AddrInfo{}
 	m.Peers.Range(func(key, value interface{}) bool {
 		peers = append(peers, value.(PeerInfo).pi)
@@ -132,7 +129,7 @@ func (m *MdnsProtocol) PeersList() []peer.AddrInfo {
 
 // PrintPeers dumps the given list of peers to the screen
 // to be selected by the user via its index.
-func (m *MdnsProtocol) PrintPeers(peers []peer.AddrInfo) {
+func (m *MDNSProtocol) PrintPeers(peers []peer.AddrInfo) {
 	for i, p := range peers {
 		fmt.Fprintf(os.Stdout, "[%d] %s\n", i, p.ID)
 	}

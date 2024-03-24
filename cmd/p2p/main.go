@@ -18,7 +18,13 @@ var (
 func main() {
 	verTag := fmt.Sprintf("v%s", RawVersion)
 	app := &cli.App{
-		Name:                 "p2p",
+		Name: "p2p",
+		Authors: []*cli.Author{
+			{
+				Name:  "Ansuman Singh",
+				Email: "ansuman12chat@gmail.com",
+			},
+		},
 		Usage:                "A peer-to-peer data transfer tool.",
 		Version:              verTag,
 		EnableBashCompletion: true,

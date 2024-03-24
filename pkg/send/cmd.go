@@ -18,19 +18,19 @@ import (
 // Command .
 var Command = &cli.Command{
 	Name:      "send",
-	Usage:     "Sends a file to a peer in your local network that is waiting to receive files",
+	Usage:     "Sends a file to a peer in your local network.",
 	Aliases:   []string{"s"},
 	Action:    Action,
 	Flags:     []cli.Flag{},
 	ArgsUsage: "FILE",
-	UsageText: `FILE	The file you want to transmit to your peer (required).`,
+	UsageText: `FILE: The file you want to transmit to your peer (required).`,
 	Description: `The send subcommand will look for multicast DNS services
 	that have registered in your local network. You will be able to choose
 	the desired peer or refresh the list.`,
 }
 
-// Action contains the logic for the send subcommand of the pcp program. It is
-// mainly responsible for the TUI state handling and input parsing.
+// Action contains the logic for the send subcommand of the p2p program. It is
+// mainly responsible for the Text-based User Interface(TUI) state handling and input parsing.
 func Action(c *cli.Context) error {
 
 	ctx, err := config.FillContext(c.Context)
@@ -46,7 +46,7 @@ func Action(c *cli.Context) error {
 
 	local, err := InitNode(ctx)
 	if err != nil {
-		return errors.Wrap(err, fmt.Sprintf("failed to initialize node"))
+		return errors.Wrap(err, fmt.Sprintf("failed to init node"))
 	}
 	defer local.Close()
 
@@ -74,7 +74,7 @@ func Action(c *cli.Context) error {
 			return scanner.Err()
 		}
 
-		// sanitize user input
+		// user input
 		input := strings.TrimSpace(scanner.Text())
 
 		// Empty input, user just pressed enter => do nothing and prompt again
@@ -135,6 +135,6 @@ func Action(c *cli.Context) error {
 func help() {
 	log.Infoln("#: the number of the peer you want to connect to")
 	log.Infoln("r: refresh peer list")
-	log.Infoln("q: quit pcp")
+	log.Infoln("q: quit p2p")
 	log.Infoln("?: this help message")
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/libp2p/go-libp2p"
@@ -12,10 +12,9 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
-	"github.com/libp2p/go-libp2p/core/protocol"
+	"github.com/pkg/errors"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/ansuman12chat/p2p/internal/log"
 	"github.com/ansuman12chat/p2p/pkg/config"
 	p2p "github.com/ansuman12chat/p2p/pkg/pb"
 )
@@ -27,7 +26,7 @@ var authenticateMessages = true
 // Node encapsulates the logic for sending and receiving messages.
 type Node struct {
 	host.Host
-	*MdnsProtocol
+	*MDNSProtocol
 	*PushProtocol
 	*TransferProtocol
 }
@@ -58,75 +57,44 @@ func Init(ctx context.Context, opts ...libp2p.Option) (*Node, error) {
 	}
 
 	node := &Node{Host: h}
-	node.MdnsProtocol = NewMdnsProtocol(node)
+	node.MDNSProtocol = NewMdnsProtocol(node)
 	node.PushProtocol = NewPushProtocol(node)
 	node.TransferProtocol = NewTransferProtocol(node)
 
 	return node, nil
 }
 
-// ProtocolFor returns the protocol identifier for the given
-// form of protobuf message.
-func (n *Node) ProtocolFor(msg interface{}) (protocol.ID, error) {
-	switch msg.(type) {
-	case *p2p.TransferAcknowledge:
-		return ProtocolTransferAck, nil
-	case *p2p.PushRequest:
-		return ProtocolPushRequest, nil
-	case *p2p.PushResponse:
-		return ProtocolPushResponse, nil
-	default:
-		return "", fmt.Errorf("unsupported message payload type")
-	}
-}
-
-func (n *Node) SendProto(ctx context.Context, id peer.ID, msg p2p.HeaderMessage) (string, error) {
-	return n.SendProtoWithParentId(ctx, id, msg, "")
-}
-
-// SendProto takes the given message and transfers it to the given peer.
-// This method signs the message to be authenticated by the peer. It returns
-// a unique request ID for this message.
-func (n *Node) SendProtoWithParentId(ctx context.Context, id peer.ID, msg p2p.HeaderMessage, parentId string) (string, error) {
+// Send prepares the message msg to be sent over the network stream s.
+// Send closes the stream for writing but leaves it open for reading.
+func (n *Node) Send(s network.Stream, msg p2p.HeaderMessage) error {
+	defer s.CloseWrite()
 
 	// Get own public key.
 	pubKey := n.Host.Peerstore().PubKey(n.Host.ID())
 	pubKeyBytes, err := crypto.MarshalPublicKey(pubKey)
 	if err != nil {
-		return "", err
+		return err
 	}
+
 	hdr := &p2p.Header{
-		RequestParentId: parentId,
-		RequestId:       uuid.New().String(),
-		NodeId:          n.Host.ID().String(),
-		NodePubKey:      pubKeyBytes,
-		Timestamp:       appTime.Now().Unix(),
+		RequestId:  uuid.New().String(),
+		NodeId:     n.Host.ID().String(),
+		NodePubKey: pubKeyBytes,
+		Timestamp:  appTime.Now().Unix(),
 	}
 	msg.SetHeader(hdr)
-
-	// Determine protocol.
-	p, err := n.ProtocolFor(msg)
-	if err != nil {
-		return "", err
-	}
-
-	// Open a logical stream, reusing an existing connection if present.
-	s, err := n.NewStream(ctx, id, p)
-	if err != nil {
-		return "", err
-	}
 
 	// Transform msg to binary to calculate the signature.
 	data, err := proto.Marshal(msg)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Sign the data and attach the signature.
 	key := n.Host.Peerstore().PrivKey(n.Host.ID())
 	signature, err := key.Sign(data)
 	if err != nil {
-		return "", err
+		return err
 	}
 	hdr.Signature = signature
 	msg.SetHeader(hdr) // Maybe unnecessary
@@ -134,28 +102,24 @@ func (n *Node) SendProtoWithParentId(ctx context.Context, id peer.ID, msg p2p.He
 	// Transform msg + signature to binary.
 	data, err = proto.Marshal(msg)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// Transmit the data.
 	_, err = s.Write(data)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	if err = s.Close(); err != nil {
-		log.Infoln("error closing stream", err)
-	}
-
-	return msg.GetHeader().RequestId, nil
+	return nil
 }
 
 // authenticateMessage verifies the authenticity of the message payload.
 // It takes the given signature and verifies it against the given public
-// key.
+// key. It returns true if the signature is valid, false otherwise.
 func (n *Node) authenticateMessage(msg p2p.HeaderMessage) (bool, error) {
 
-	// Short circuit in test runs with bogus keys.
+	// Short circuit in test runs with invalid keys.
 	if !authenticateMessages {
 		return true, nil
 	}
@@ -175,15 +139,14 @@ func (n *Node) authenticateMessage(msg p2p.HeaderMessage) (bool, error) {
 	msg.GetHeader().Signature = signature
 
 	// restore peer id binary format from base58 encoded node id msg
-	peerId, err := peer.Decode(msg.GetHeader().NodeId)
+	peerID, err := peer.Decode(msg.GetHeader().NodeId)
 	if err != nil {
 		return false, err
 	}
-	// TODO: The NodePubKey also needs to be checked against the one we're assuming.
+
 	key, err := crypto.UnmarshalPublicKey(msg.GetHeader().NodePubKey)
 	if err != nil {
-		log.Infof("Error: ", err)
-		return false, fmt.Errorf("failed to extract key from message key msg : %s")
+		return false, fmt.Errorf("failed to extract key from message key msg")
 	}
 
 	// extract node id from the provided public key
@@ -194,32 +157,27 @@ func (n *Node) authenticateMessage(msg p2p.HeaderMessage) (bool, error) {
 	}
 
 	// verify that message author node id matches the provided node public key
-	if idFromKey != peerId {
+	if idFromKey != peerID {
 		return false, fmt.Errorf("node id and provided public key mismatch")
 	}
 
 	return key.Verify(bin, signature)
 }
 
-// readMessage drains the given stream and parses the content in the unmarshalls
+// Read drains the given stream and parses the content. It unmarshalls
 // it into the protobuf object. It also verifies the authenticity of the message.
-func (n *Node) readMessage(s network.Stream, data p2p.HeaderMessage) error {
+// Read closes the stream for reading but leaves it open for writing.
+func (n *Node) Read(s network.Stream, data p2p.HeaderMessage) error {
+	defer s.CloseRead()
 	buf, err := io.ReadAll(s)
 	if err != nil {
-		err2 := s.Reset()
-		if err2 != nil {
-			fmt.Fprintln(os.Stderr, err2)
+		if err2 := s.Reset(); err2 != nil {
+			err = errors.Wrap(err, err2.Error())
 		}
 		return err
 	}
 
-	err = s.Close()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error closing stream:", err)
-	}
-
-	err = proto.Unmarshal(buf, data)
-	if err != nil {
+	if err = proto.Unmarshal(buf, data); err != nil {
 		return err
 	}
 
@@ -233,4 +191,29 @@ func (n *Node) readMessage(s network.Stream, data p2p.HeaderMessage) error {
 	}
 
 	return nil
+}
+
+// WaitForEOF waits for the EOF signal on the given stream.
+func (n *Node) WaitForEOF(s network.Stream) error {
+	// 10 sec timeout
+	timeout := time.After(10 * time.Second)
+	done := make(chan error)
+	go func() {
+		buf := make([]byte, 1)
+		n, err := s.Read(buf)
+		if err == io.EOF && n == 0 {
+			err = nil
+		} else if n != 0 {
+			err = fmt.Errorf("stream returned data unexpectedly")
+		}
+		done <- err
+		close(done)
+	}()
+	select {
+	case <-timeout:
+		return fmt.Errorf("timeout")
+	case err := <-done:
+		return err
+	}
+	// Select on the done channel and a timeout channel.
 }
