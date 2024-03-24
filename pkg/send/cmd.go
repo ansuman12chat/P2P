@@ -17,16 +17,14 @@ import (
 
 // Command .
 var Command = &cli.Command{
-	Name:      "send",
-	Usage:     "Sends a file to a peer in your local network.",
-	Aliases:   []string{"s"},
-	Action:    Action,
-	Flags:     []cli.Flag{},
-	ArgsUsage: "FILE",
-	UsageText: `FILE: The file you want to transmit to your peer (required).`,
-	Description: `The send subcommand will look for multicast DNS services
-	that have registered in your local network. You will be able to choose
-	the desired peer or refresh the list.`,
+	Name:        "send",
+	Usage:       "Sends a file to a peer in your local network.",
+	Aliases:     []string{"s"},
+	Action:      Action,
+	Flags:       []cli.Flag{},
+	ArgsUsage:   "FILE",
+	UsageText:   `FILE: The file you want to transmit to your peer (required).`,
+	Description: ``,
 }
 
 // Action contains the logic for the send subcommand of the p2p program. It is

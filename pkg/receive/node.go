@@ -131,7 +131,7 @@ func (n *Node) TransferFinishHandler(size int64) chan int64 {
 		if received == size {
 			log.Infoln("Successfully received file!")
 		} else {
-			log.Infoln("WARNING: Only received %d of %d bytes!", received, size)
+			log.Infoln("Only received %d of %d bytes!", received, size)
 		}
 
 		n.shutdown <- nil

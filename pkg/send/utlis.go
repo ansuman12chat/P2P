@@ -10,6 +10,7 @@ import (
 	mh "github.com/multiformats/go-multihash"
 )
 
+// calcContentID calculates the content ID of the file
 func calcContentID(filepath string) (cid.Cid, error) {
 
 	f, err := os.Open(filepath)
