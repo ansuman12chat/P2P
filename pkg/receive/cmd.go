@@ -21,14 +21,14 @@ var Command = &cli.Command{
 	Flags: []cli.Flag{
 		&cli.Int64Flag{
 			Name:    "port",
-			EnvVars: []string{"PCP_PORT"},
+			EnvVars: []string{"P2P_PORT"},
 			Aliases: []string{"p"},
 			Usage:   "The port at which you are reachable for other peers in the network.",
 			Value:   44044,
 		},
 		&cli.StringFlag{
 			Name:    "host",
-			EnvVars: []string{"PCP_HOST"},
+			EnvVars: []string{"P2P_HOST"},
 			Usage:   "The host at which you are reachable for other peers in the network.",
 			Value:   "0.0.0.0",
 		},
