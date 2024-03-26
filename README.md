@@ -36,7 +36,7 @@ $ p2p send my_file
 Querying peers that are waiting to receive files...
 
 Found the following peer(s):
-[0] 16Uiu2HAkwyP8guhAXN66rkn8BEw3SjBavUuEu4VizTHhRcu7WLxq
+[0] 16Uiu2HAm9YBEqaJE1fHt1XXrawCJoMAeYm5sN6nzUGWGMQB4kfb
 
 Select the peer you want to send the file to [#,r,q,?]:
 ```
